@@ -1,0 +1,135 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgis/postgis:18-3.6
+    container_name: ecommerce-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      # Required for PG 18 to use your specific volume path correctly
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      # Mount to the parent directory to allow PG 18 to manage its internal structure
+      - postgres_data:/var/lib/postgresql/data
+      
+      # FTS Arabic Dictionaries (Updated paths for PG 18)
+      - ./src/main/resources/db/tsearch_data/ar.affix:/usr/share/postgresql/18/tsearch_data/ar.affix:ro
+      - ./src/main/resources/db/tsearch_data/ar.dict:/usr/share/postgresql/18/tsearch_data/ar.dict:ro
+      - ./src/main/resources/db/tsearch_data/ar.stop:/usr/share/postgresql/18/tsearch_data/ar.stop:ro
+      - ./src/main/resources/db/tsearch_data/arabic_syn.syn:/usr/share/postgresql/18/tsearch_data/arabic_syn.syn:ro
+      
+      - ./docker/db-init:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "127.0.0.1:5431:5432" # Secure: accessible only from localhost
+    networks:
+      - ecommerce-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ecommerceapp
+    depends_on:
+      postgres:
+        condition: service_healthy
+      # لو فعّلت Redis:
+      # redis:
+      #   condition: service_healthy
+    environment:
+      # Database
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-docker}
+
+      # JPA/Hibernate
+
+      SPRING_JPA_SHOW_SQL: false
+      SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT: org.hibernate.dialect.PostgreSQLDialect
+
+      # Flyway
+      SERVER_PORT: ${SERVER_PORT:-8080}
+
+      # Actuator (لتسهيل الـ healthcheck)
+      MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info
+      MANAGEMENT_SERVER_PORT: 8080
+      MANAGEMENT_ENDPOINT_HEALTH_PROBES_ENABLED: true
+
+      # Security (احفظها في .env)
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRATION: ${JWT_EXPIRATION:-86400000}
+
+      # File upload
+      SPRING_SERVLET_MULTIPART_MAX_FILE_SIZE: 10MB
+      SPRING_SERVLET_MULTIPART_MAX_REQUEST_SIZE: 10MB
+      UPLOAD_DIR: ${UPLOAD_DIR:-/app/uploads}
+
+      # Logging
+      LOGGING_LEVEL_COM_HAND_DEMO: ${LOGGING_LEVEL_COM_HAND_DEMO:-INFO}
+      LOGGING_LEVEL_SQL: ${LOGGING_LEVEL_SQL:-WARN}
+
+      # (اختياري) Redis Spring config
+      # SPRING_DATA_REDIS_HOST: redis
+      # SPRING_DATA_REDIS_PORT: 6379
+
+    ports:
+      - "8080:8080"
+    volumes:
+      - app_uploads:/app/uploads
+      - app_logs:/app/logs
+    networks:
+      - ecommerce-network
+    entrypoint:
+      - /bin/sh
+      - -c
+      - >
+        exec java -jar /app/platform.jar
+    healthcheck:
+      # استخدم wget لو ما بدك تضيف curl بالصورة
+      test:
+        [
+          "CMD-SHELL",
+          'wget -qO- http://localhost:8080/actuator/health | grep -q ''"status":"UP"''',
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 90s
+    restart: unless-stopped
+  nginx:
+    image: nginx:latest
+    container_name: ecommerce-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - app_uploads:/app/uploads:ro
+      - ./docker/nginx/certs:/etc/nginx/certs:ro
+    depends_on:
+      - app
+    networks:
+      - ecommerce-network
+    restart: unless-stopped
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  app_uploads:
+    driver: local
+  app_logs:
+    driver: local
+
+networks:
+  ecommerce-network:
+    driver: bridge
