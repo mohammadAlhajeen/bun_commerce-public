@@ -40,34 +40,34 @@ To support this, the platform emphasizes:
 
 ## 🏗️ Core Platform Capabilities
 
-| Capability                           | Description                                                                         |
-| ------------------------------------ | ----------------------------------------------------------------------------------- |
-| **Multi-Tenant Commerce Engine**     | Supports independent companies operating within a shared infrastructure.            |
-| **Advanced Product Modeling**        | Flexible catalog with dynamic attributes, variants, and customization.              |
-| **Order-Centric Architecture**       | Orders modeled as first-class domain entities with clear lifecycle states.          |
-| **Deposit & Pre-Order Support**      | Native support for partial payments and handmade/pre-order workflows.               |
-| **Escrow-Oriented Wallet Logic**     | Transaction flows designed for safety, reversibility, and auditability.             |
-| **Modular Pricing Rules**            | Pricing logic isolated from products to support future strategies.                  |
-| **Role-Separated Access Control**    | Clear separation of customer, company, and operational roles.                       |
-| **Arabic-Ready Search Layer**        | Optimized PostgreSQL Full-Text Search for Arabic content.                           |
-| **Scalable Modular Backend**         | Designed as a modular monolith with microservice-ready boundaries.                  |
+| Capability                        | Description                                                                |
+| --------------------------------- | -------------------------------------------------------------------------- |
+| **Multi-Tenant Commerce Engine**  | Supports independent companies operating within a shared infrastructure.   |
+| **Advanced Product Modeling**     | Flexible catalog with dynamic attributes, variants, and customization.     |
+| **Order-Centric Architecture**    | Orders modeled as first-class domain entities with clear lifecycle states. |
+| **Deposit & Pre-Order Support**   | Native support for partial payments and handmade/pre-order workflows.      |
+| **Escrow-Oriented Wallet Logic**  | Transaction flows designed for safety, reversibility, and auditability.    |
+| **Modular Pricing Rules**         | Pricing logic isolated from products to support future strategies.         |
+| **Role-Separated Access Control** | Clear separation of customer, company, and operational roles.              |
+| **Arabic-Ready Search Layer**     | Optimized PostgreSQL Full-Text Search for Arabic content.                  |
+| **Scalable Modular Backend**      | Designed as a modular monolith with microservice-ready boundaries.         |
 
 ---
 
 ## 🧩 Domain-Driven Module Structure
 
-| Module         | Responsibility                                           |
-| -------------- | -------------------------------------------------------- |
-| **Architecture** | System boundaries and core abstractions                  |
-| **Media**        | Media ownership, validation, and lifecycle               |
-| **Company**      | Company isolation and storefront identity                |
-| **Catalog**      | Products, attributes, and customization logic            |
-| **Cart**         | Multi-company cart aggregation and validation            |
-| **Order**        | Order lifecycle and state transitions                    |
-| **Shipment**     | Delivery workflows and assignment                        |
-| **Wallet**       | Escrow and transaction abstraction                       |
-| **Security**     | Authentication and authorization boundaries              |
-| **Data**         | PostgreSQL schema, indexing, and query optimization      |
+| Module           | Responsibility                                      |
+| ---------------- | --------------------------------------------------- |
+| **Architecture** | System boundaries and core abstractions             |
+| **Media**        | Media ownership, validation, and lifecycle          |
+| **Company**      | Company isolation and storefront identity           |
+| **Catalog**      | Products, attributes, and customization logic       |
+| **Cart**         | Multi-company cart aggregation and validation       |
+| **Order**        | Order lifecycle and state transitions               |
+| **Shipment**     | Delivery workflows and assignment                   |
+| **Wallet**       | Escrow and transaction abstraction                  |
+| **Security**     | Authentication and authorization boundaries         |
+| **Data**         | PostgreSQL schema, indexing, and query optimization |
 
 ---
 
@@ -95,6 +95,7 @@ This repository represents a **closed-source commercial platform**.
 Architectural discussions, diagrams, and conceptual explanations may be shared independently.
 
 ---
+
 ## 🧬 Relationship to Suqnna Marketplace
 
 **Bun Commerce** is an **independently developed, closed-source commercial platform**.
@@ -173,15 +174,15 @@ THE SOFTWARE.
 
 ## 🔍 Clear Separation
 
-* **Suqnna Marketplace**
+- **Suqnna Marketplace**
   Open-source academic prototype (MIT Licensed)
   Research, experimentation, and validation only
 
-* **Arabic Stopwords Collection (Gene Diaz)**
+- **Arabic Stopwords Collection (Gene Diaz)**
   Open-source linguistic dataset (MIT Licensed)
   Attribution-only dependency
 
-* **Bun Commerce**
+- **Bun Commerce**
   Closed-source proprietary product
   Independently engineered commercial platform
 
@@ -190,10 +191,10 @@ Arabic stopwords dataset.
 
 It only leverages:
 
-* ✅ Architectural patterns validated during academic research
-* ✅ Domain modeling experiments refined through prototyping
-* ✅ Technical trade-offs documented during early design iterations
-* ✅ Linguistic normalization logic derived from open datasets
+- ✅ Architectural patterns validated during academic research
+- ✅ Domain modeling experiments refined through prototyping
+- ✅ Technical trade-offs documented during early design iterations
+- ✅ Linguistic normalization logic derived from open datasets
 
 > **Suqnna served as a research prototype.**
 > **Open-source datasets informed early design.**
@@ -217,5 +218,3 @@ It prioritizes **correctness**, **evolution**, and **sustainability** over featu
 
 All third-party components are used in compliance with their respective licenses.
 Full license texts are included above for transparency and legal completeness.
-#   b u n _ c o m m e r c e - p u b l i c  
- 
