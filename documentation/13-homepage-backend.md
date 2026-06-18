@@ -2,17 +2,16 @@
 
 ## Overview
 
-The homepage backend provides the public landing payload used by the storefront root page.
+The homepage backend provides the public storefront landing payload.
 
 It is responsible for:
 
-- returning root categories for homepage navigation
-- returning featured product cards
-- returning featured public collections
-- assembling multiple homepage section strategies
-- batching product-card hydration for homepage traffic
-- caching the assembled homepage response
-- invalidating homepage cache when catalog state changes
+- returning root categories for homepage navigation;
+- returning featured public product cards;
+- assembling homepage sections from product, category, collection, static, and hybrid strategies;
+- batching product-card hydration through the shared `ProductCard` read path;
+- caching the assembled homepage response;
+- setting short public HTTP cache headers.
 
 Primary packages:
 
@@ -20,75 +19,65 @@ Primary packages:
 - `com.bun.platform.catalog.product.service`
 - `com.bun.platform.catalog.product.dto`
 
-Collaborating packages:
+Collaborators:
 
 - `com.bun.platform.catalog.category`
 - `com.bun.platform.catalog.product.repository`
+- `com.bun.platform.catalog.product.product_dtos.ProductCard`
 
 ## Public API
 
-### Controller
+Controller:
 
-**Controller:** `HomePageController`  
-**Base path:** `/api/public/home`
+- `HomePageController`
 
-### Endpoint
+Endpoint:
 
 - `GET /api/public/home`
 
-### Query Parameters
+Query parameters:
 
-- `size` optional integer
+- `size`
+- `categoryPage`
+- `categorySize`
 
-### Response Contract
-
-The endpoint returns `HomePageDataDto`.
-
-Top-level fields:
-
-- `categories`
-- `products`
-- `collections`
-- `sections`
-
-### HTTP Cache Behavior
-
-The controller sets public cache headers:
+HTTP cache behavior:
 
 - `Cache-Control: public, max-age=120`
 
-This allows short-lived CDN or reverse-proxy reuse while keeping the payload reasonably fresh.
+## Response Contract
 
-## DTO Reference
+The endpoint returns `HomePageDataDto`.
+
+Current fields:
+
+- `categories: List<CategoryRootsProjection>`
+- `products: List<ProductCard>`
+- `sections: List<HomeSectionDto>`
+
+Important current-contract note:
+
+- there is no top-level `collections` field in `HomePageDataDto`;
+- collection-backed content appears through homepage sections;
+- products use the standardized public `ProductCard` shape.
+
+## DTOs
 
 ### `HomePageDataDto`
 
-Top-level homepage payload.
-
-Fields:
-
-- `categories: List<CategoryRootsProjection>`
-- `products: List<ProductCardProjection>`
-- `collections: List<HomeCollectionSummaryDto>`
-- `sections: List<HomeSectionDto>`
-
-### `HomeCollectionSummaryDto`
-
-Minimal collection block used by the homepage.
-
-Fields:
-
-- `id`
-- `name`
-- `slug`
-- `description`
-- `imageUrl`
+```java
+public record HomePageDataDto(
+        List<CategoryRootsProjection> categories,
+        List<ProductCard> products,
+        List<HomeSectionDto> sections) {
+}
+```
 
 ### `HomeSectionDto`
 
 Represents one rendered homepage section.
 
-Fields:
+Typical fields:
 
 - `id`
 - `strategy`
@@ -100,7 +89,7 @@ Fields:
 
 ### `HomeSectionStrategy`
 
-Current enum values:
+Current strategy concepts:
 
 - `PRODUCT_BASED`
 - `CATEGORY_BASED`
@@ -112,20 +101,30 @@ Current enum values:
 
 Homepage assembly is handled by `HomePageService`.
 
-Execution flow:
+High-level flow:
 
-1. normalize the requested section size
-2. load root categories from `CategoryService`
-3. load featured public collections from `ProductCollectionRepository`
-4. build a lightweight section index using product IDs only
-5. union all homepage product IDs into one distinct ordered set
-6. hydrate product cards in one cache-aware batch through `ProductReadService`
-7. construct homepage sections from the hydrated card map
-8. return one `HomePageDataDto`
+1. Normalize requested section size and category paging inputs.
+2. Load root categories from `CategoryService`.
+3. Build product IDs for each section strategy.
+4. Union section product IDs into one ordered distinct set.
+5. Hydrate all required product cards once through `ProductReadService.getProductCardMap(...)`.
+6. Reuse the hydrated map to build each homepage section.
+7. Return `HomePageDataDto`.
 
-This keeps homepage reads predictable under traffic because the service avoids repeated card loading per section.
+The important performance rule is: collect IDs first, hydrate cards once.
 
-## Section Strategies
+## Product Card Hydration
+
+The homepage uses the same card path as other public product surfaces:
+
+- `ProductReadService.getProductCardMap(productIds)`
+- `ProductCardLookupService.getProductCardMap(productIds)`
+- `ProductCardCache.getAll(productIds)`
+- `ProductRepository.findCardsByIds(ids)` on cache miss
+
+The returned card type is `ProductCard`, not `ProductCardProjection`.
+
+## Section Sources
 
 ### Product-Based Section
 
@@ -135,261 +134,110 @@ Source:
 
 Behavior:
 
-- uses active products only
-- orders by `salesCount`, then `createdAt`, then `id`
-- reuses the hydrated product-card map
+- prefers products with active offers;
+- falls back to general active products if needed;
+- only products with active default variants are eligible;
+- ordering favors sales count, creation time, and stable product ID fallback.
 
 ### Category-Based Section
 
 Source:
 
-- root categories from `CategoryService.getAllRoots()`
-- product IDs from `ProductReadService.getProductIdsForCategory(...)`
+- root categories from `CategoryService`;
+- product IDs from `ProductReadService.getProductIdsForCategory(...)`.
 
 Behavior:
 
-- homepage currently takes the first two root categories
-- category expansion includes child categories through `CategoryService.findCategoryWithAllChildrenIds(...)`
-- only active products with an active default variant are eligible
+- expands category descendants through category service helpers;
+- only active products with active default variants are eligible.
 
 ### Collection-Based Section
 
 Source:
 
-- public active collections from `ProductCollectionRepository.findByIsActiveTrueOrderByCreatedAtDesc(...)`
-- product IDs from `CollectionService.getCollectionProductIds(...)`
+- public active collections;
+- product IDs from collection membership ordering.
 
 Behavior:
 
-- homepage currently takes the first two featured collections
-- collection product order follows collection item sort order
-- only active products inside active, non-deleted collections are returned
+- only active products inside active, non-deleted collections are returned;
+- product cards are hydrated through the shared product-card cache.
 
 ### Static Section
 
 Source:
 
-- derived from featured homepage products
+- derived from already selected featured products.
 
 Behavior:
 
-- selects alternating items from the featured product list
-- acts as a stable editorial block without extra repository reads
+- provides a stable editorial-like block without extra card queries.
 
 ### Hybrid Section
 
 Source:
 
-- product-based section
-- first category-based section
-- first collection-based section
+- product-based section;
+- category-based section;
+- collection-based section.
 
 Behavior:
 
-- merges multiple strategy results into one ordered unique list
-- preserves first-seen order
-- limits the final result to the configured section size
-
-## Read Path Performance Model
-
-### Batch ID Collection
-
-The homepage does not fetch each section as fully hydrated product cards independently.
-
-Instead it:
-
-- collects IDs per section first
-- unions all IDs into one ordered distinct set
-- hydrates cards once
-
-This removes repeated repository and cache work when the same product appears in more than one section.
-
-### Product Card Hydration
-
-`ProductReadService.getProductCardMap(...)` is the key hot-path optimization.
-
-Behavior:
-
-- checks `product_card` cache for each requested product ID
-- accumulates cache misses
-- loads all misses in one repository call through `ProductRepository.findCardsByIds(...)`
-- writes loaded cards back into `product_card`
-- returns an ID-keyed map for reuse by callers
-
-This is the main change that makes homepage traffic cheaper than repeated `getProductCard(id)` calls.
-
-### Collection Reads
-
-`CollectionService.getCollectionProductCards(...)` now:
-
-- reads collection product IDs from the collection cache
-- hydrates cards through the same batch-aware `ProductReadService`
-- logs at `debug` level instead of `info` for public reads
-
-That reduces both DB load and log noise under high traffic.
+- merges section IDs;
+- preserves first-seen order;
+- limits output to the configured section size.
 
 ## Cache Layers
 
 ### `homepage`
 
-Used by:
+Owner:
 
-- `HomePageService.getHomePageData(...)`
-
-Purpose:
-
-- cache the fully assembled homepage payload
-
-### `product_card`
-
-Used by:
-
-- `ProductReadService.getProductCard(...)`
-- `ProductReadService.getProductCardMap(...)`
+- `HomePageService`
 
 Purpose:
 
-- cache individual product-card projections
+- cache the assembled homepage response.
 
-### `product_card_collections`
+### `ProductCardCache`
 
-Used by:
+Owner:
 
-- `ProductCacheService.getCollectionProductIds(...)`
-
-Purpose:
-
-- cache ordered collection membership as product IDs only
-
-### `categorie_attributs`
-
-Used by:
-
-- category root and tree reads
+- catalog product read path.
 
 Purpose:
 
-- cache root categories and derived category hierarchies used by homepage assembly
+- cache individual public `ProductCard` records.
+
+### Collection and Category Caches
+
+Collection/category services may cache membership and hierarchy data used during homepage assembly.
 
 ## Cache Invalidation
 
-### Homepage Cache Service
+Homepage cache should be invalidated when public homepage-visible catalog state changes, including:
 
-`HomePageCacheService` provides a focused invalidation path for the `homepage` cache.
+- product create/update/delete;
+- product activate/deactivate;
+- variant activate/deactivate;
+- default variant changes;
+- variant price changes;
+- offer state changes that affect homepage cards;
+- collection create/update/delete;
+- collection membership or order changes;
+- category changes that affect section navigation or category-backed sections.
 
-### Product Event Invalidation
+## Current Invariants
 
-`ProductEventListener` clears homepage cache after relevant product events, including:
+- homepage products are public `ProductCard` records;
+- card hydration is batched;
+- section construction reuses the same hydrated card map;
+- response is public and short-cacheable;
+- homepage response does not expose seller/admin-only product fields.
 
-- product created
-- product activated
-- product deactivated
-- product updated
-- product deleted
-- variant created
-- variant activated
-- variant deactivated
-- default variant changed
-- product price changed
-- variant price changed
-- availability changed
-- invariant violation
+## Recommended Next Steps
 
-For product-bound changes it also evicts:
-
-- `product_cache`
-- `product_card`
-
-### Collection Mutation Invalidation
-
-`CollectionService` clears homepage cache after:
-
-- collection create
-- collection update
-- collection activation and deactivation
-- collection delete
-- add product to collection
-- remove product from collection
-- reorder collection items
-- update item sort order
-
-### Category Mutation Invalidation
-
-`CategoryService` clears homepage cache after:
-
-- category create
-- category update
-- category delete
-
-## Repository Rules
-
-### Homepage Product IDs
-
-`ProductRepository.findHomeProductIds(...)` returns:
-
-- active products only
-- products with an active default variant
-- descending order by `salesCount`, then `createdAt`, then `id`
-
-### Category Product IDs
-
-`ProductRepository.findActiveProductIdsByCategoryIds(...)` returns:
-
-- active products only
-- category-scoped product IDs
-- only products with an active default variant
-
-### Batched Card Read
-
-`ProductRepository.findCardsByIds(...)` returns:
-
-- public card projection data only
-- active products only
-- default active variant price state only
-
-This query is intentionally projection-based and does not load full entities.
-
-## Operational Notes
-
-### Good Fit
-
-This homepage backend is optimized for:
-
-- public anonymous traffic
-- repeated reads with short freshness windows
-- overlapping product appearance across sections
-- cache-friendly storefront rendering
-
-### Current Limits
-
-Current homepage behavior is still fixed in service code:
-
-- first two root categories only
-- first two public collections only
-- first three featured collections loaded for summary
-- one homepage payload shape for all users
-
-There is no CMS-driven section configuration yet.
-
-### Scaling Direction
-
-If traffic grows further, the next backend steps would be:
-
-- add explicit metrics for homepage cache hit ratio
-- add CDN cache keys and stale-while-revalidate policy at the edge
-- precompute homepage section indexes asynchronously
-- add payload trimming for clients that only need selected blocks
-- move homepage strategy configuration into persistent admin-managed data
-
-## Related Code
-
-Primary code locations:
-
-- `src/main/java/com/bun/platform/catalog/product/controller/HomePageController.java`
-- `src/main/java/com/bun/platform/catalog/product/service/HomePageService.java`
-- `src/main/java/com/bun/platform/catalog/product/service/HomePageCacheService.java`
-- `src/main/java/com/bun/platform/catalog/product/service/ProductReadService.java`
-- `src/main/java/com/bun/platform/catalog/product/service/CollectionService.java`
-- `src/main/java/com/bun/platform/catalog/product/event/ProductEventListener.java`
-- `src/main/java/com/bun/platform/catalog/product/repository/ProductRepository.java`
-- `src/main/java/com/bun/platform/catalog/product/repository/ProductCollectionRepository.java`
+- Add examples of the JSON response once the public demo data is stable.
+- Keep `13-homepage-uml.md` aligned with the `ProductCard` shape.
+- Add cache-hit metrics for homepage and product-card hydration.
+- Add admin-configurable homepage section definitions if editorial control becomes a requirement.

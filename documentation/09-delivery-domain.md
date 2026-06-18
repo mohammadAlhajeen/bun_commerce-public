@@ -55,7 +55,7 @@ Core fields:
 
 - `id`
 - `orderId`
-- `sellerId`
+- `storeId`
 - `customerId`
 - `deliveryCompanyId`
 - `deliveryOwnershipType`
@@ -111,7 +111,7 @@ Design note:
 
 This separates merchant ownership from delivery execution.
 
-- `sellerId`: merchant that owns the order / shipment record
+- `storeId`: store that owns the order / shipment record (seller resolved via `SellerStoreService.resolveSellerId`)
 - `deliveryCompanyId`: nullable outsourced delivery company currently responsible for delivery operations
 - `deliveryOwnershipType`: how delivery is being handled
 
@@ -325,8 +325,8 @@ per-company tariff model.
 
 ### Shipment creation
 
-- seller must exist
-- if `orderId` is provided, it must belong to the seller
+- store must exist
+- if `orderId` is provided, it must belong to the store
 - `DELIVERY_COMPANY` requires a valid internal company id
 - `MERCHANT`, `FREE_LANCER`, and `EXTERNAL_MANUAL` normalize `deliveryCompanyId` to `null`
 - item quantities must be at least 1
@@ -398,6 +398,8 @@ per-company tariff model.
 - `PATCH /api/delivery-company/drivers/{driverId}/status`
 
 ### Seller shipment endpoints
+
+All seller shipment endpoints require `?storeId={storeId}` query parameter.
 
 - `POST /api/seller/delivery/shipments`
 - `PATCH /api/seller/delivery/shipments/{shipmentId}`

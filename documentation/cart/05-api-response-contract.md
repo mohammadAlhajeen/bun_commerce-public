@@ -5,7 +5,7 @@
 `CartView` contains:
 
 - `cartId`
-- `sellerId`
+- `storeId`
 - `items`
 - `removedItems`
 - `totals`
@@ -81,6 +81,21 @@ Each entry contains:
 - `finalPrice` (current effective price including active offers)
 
 Use this endpoint when a fast, image-and-price summary is needed (e.g., order review screens, mini-cart drawers) without triggering a full validation pass.
+
+## CartSummaryView — all carts lightweight preview
+
+Available at `GET /api/cart/my/summary`.
+
+Returns all non-empty open carts for the authenticated customer without running full validation.
+
+Each cart entry contains:
+
+- `cartId`
+- `storeId`
+- `itemCount`
+- `items` as `CartItemSummaryView[]`
+
+Use this endpoint for side-cart drawers or cart-selection pages where the client only needs a quick preview across all carts before the customer chooses which cart to open or continue checkout with.
 
 ## Frontend interpretation rules
 

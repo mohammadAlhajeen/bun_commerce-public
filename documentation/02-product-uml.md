@@ -368,11 +368,9 @@ sequenceDiagram
     PublicCollectionController->>CollectionService: getCollectionProductCards(id, page, size)
     CollectionService->>ProductCacheService: getCollectionProductIds(id, page, size)
     ProductCacheService-->>CollectionService: List<Long> productIds
-    loop each productId
-        CollectionService->>ProductReadService: getProductCard(productId)
-        ProductReadService-->>CollectionService: ProductCardProjection
-    end
-    CollectionService-->>PublicCollectionController: List<ProductCardProjection>
+    CollectionService->>ProductReadService: getProductCardsByIds(productIds)
+    ProductReadService-->>CollectionService: List<ProductCard>
+    CollectionService-->>PublicCollectionController: List<ProductCard>
     PublicCollectionController-->>Visitor: 200 OK
 ```
 

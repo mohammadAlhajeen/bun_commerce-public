@@ -80,7 +80,7 @@ The current implementation is explicitly variant-oriented. A product-level offer
 - `endDate`
 - `isStopped`
 - `isLifecycleApplied`
-- `sellerId`
+- `storeId`
 - `variants`
 - `createdAt`
 - `updatedAt`
@@ -186,14 +186,14 @@ Acts as the command entry point for offer creation, targeting changes, and lifec
 
 #### Main Operations
 
-- `createOffer(Long, OfferCreateRequestDto)`
-- `addVariants(Long, Long, Set<Long>)`
-- `removeVariants(Long, Long, Set<Long>)`
-- `addProducts(Long, Long, Set<Long>)`
-- `removeProducts(Long, Long, Set<Long>)`
-- `stopOffer(Long, Long)`
-- `resumeOffer(Long, Long)`
-- `activateOfferNow(Long, Long)`
+- `createOffer(Long storeId, OfferCreateRequestDto)`
+- `addVariants(Long storeId, Long offerId, Set<Long>)`
+- `removeVariants(Long storeId, Long offerId, Set<Long>)`
+- `addProducts(Long storeId, Long offerId, Set<Long>)`
+- `removeProducts(Long storeId, Long offerId, Set<Long>)`
+- `stopOffer(Long storeId, Long offerId)`
+- `resumeOffer(Long storeId, Long offerId)`
+- `activateOfferNow(Long storeId, Long offerId)`
 
 #### Behavioral Guarantees
 
@@ -493,7 +493,7 @@ Publication notes:
 ## Security Notes
 
 - `OfferCommandService.createOffer(...)` is annotated with `@PreAuthorize("hasRole('SELLER')")`
-- ownership checks are enforced by `findByIdAndSellerId(...)` and seller-scoped variant counting
+- ownership checks are enforced by `findByIdAndStoreId(...)` and store-scoped variant counting
 - the controller layer currently does not yet reflect the same security model cleanly
 
 ## Implementation Notes

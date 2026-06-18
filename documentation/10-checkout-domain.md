@@ -68,7 +68,7 @@ It owns:
 - checkout identity
 - checkout status
 - source cart reference
-- customer and seller ids
+- customer and store ids
 - address snapshot
 - contact snapshot
 - delivery notes snapshot
@@ -199,8 +199,8 @@ If `CheckoutItem` were independent, the model would allow partial mutation of a 
 - checkout items are snapshot data only
 - no live `CartItem` or `Cart` entities are navigated after persistence
 - totals are the frozen result of the pricing service at confirm time
-- checkout belongs to one customer and one seller
-- all items belong to the same seller-scoped cart
+- checkout belongs to one customer and one store
+- all items belong to the same store-scoped cart
 - checkout can be linked to at most one resulting order
 - checkout lifecycle changes apply at aggregate level
 
@@ -323,7 +323,7 @@ Code:
 Pricing consumes:
 
 - customer id
-- seller id
+- store id
 - resolved shipping address snapshot
 - optional coupon code
 - reconciled cart line data:
@@ -555,7 +555,7 @@ Fields:
 Contains:
 
 - cart identity
-- seller identity
+- store identity
 - `confirmable` flag
 - shipping address snapshot view
 - contact snapshot view
@@ -593,7 +593,7 @@ Contains:
 Adds:
 
 - customer id
-- seller id
+- store id
 - delivery notes
 - expiration metadata
 - reservation metadata

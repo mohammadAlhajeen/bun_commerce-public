@@ -9,13 +9,13 @@ flowchart LR
     HomeController --> HomeService["HomePageService"]
 
     HomeService --> CategoryDomain["Category domain"]
-    HomeService --> ProductDomain["Product read path"]
-    HomeService --> CollectionDomain["Collection read path"]
+    HomeService --> ProductRead["ProductReadService"]
+    HomeService --> CollectionDomain["CollectionService / collection repo"]
     HomeService --> HomepageCache["homepage cache"]
 
-    ProductDomain --> ProductTables["product_definitions + variants"]
-    CollectionDomain --> CollectionTables["product_collections + product_collection_items"]
-    CategoryDomain --> CategoryTables["categories"]
+    ProductRead --> CardLookup["ProductCardLookupService"]
+    CardLookup --> CardCache["ProductCardCache"]
+    CardCache --> ProductRepo["ProductRepository.findCardsByIds"]
 ```
 
 ## Class Diagram
@@ -23,11 +23,11 @@ flowchart LR
 ```mermaid
 classDiagram
     class HomePageController {
-        +getHomePage(size)
+        +getHomePage(size, categoryPage, categorySize)
     }
 
     class HomePageService {
-        +getHomePageData(size)
+        +getHomePageData(size, categoryPage, categorySize)
         -loadFeaturedCollections()
         -buildSectionIndex()
         -buildSections()
@@ -44,17 +44,8 @@ classDiagram
 
     class HomePageDataDto {
         +List categories
-        +List products
-        +List collections
-        +List sections
-    }
-
-    class HomeCollectionSummaryDto {
-        +Long id
-        +String name
-        +String slug
-        +String description
-        +String imageUrl
+        +List~ProductCard~ products
+        +List~HomeSectionDto~ sections
     }
 
     class HomeSectionDto {
@@ -64,7 +55,7 @@ classDiagram
         +String description
         +String ctaLabel
         +String ctaHref
-        +List products
+        +List~ProductCard~ products
     }
 
     class HomeSectionStrategy {
@@ -76,12 +67,39 @@ classDiagram
         HYBRID
     }
 
+    class ProductCard {
+        +Long id
+        +String name
+        +UUID mainImageId
+        +Boolean isActive
+        +Integer salesCount
+        +String currency
+        +Long variantId
+        +BigDecimal basePrice
+        +BigDecimal discountAmount
+        +Instant offerEndsAt
+        +String offerType
+        +effectivePrice()
+        +hasActiveOffer()
+        +mainImageUrl()
+    }
+
     class ProductReadService {
         +getHomeProductIds(size)
         +getProductIdsForCategory(categoryId, size)
         +getProductCardMap(productIds)
         +getProductCardsByIds(productIds)
         +getProductCard(productId)
+    }
+
+    class ProductCardLookupService {
+        +getProductCardMap(productIds)
+        +getProductCardsByIds(productIds)
+    }
+
+    class ProductCardCache {
+        +get(productId)
+        +getAll(productIds)
     }
 
     class CollectionService {
@@ -101,10 +119,6 @@ classDiagram
         +findCardById(productId)
     }
 
-    class ProductCollectionRepository {
-        +findByIsActiveTrueOrderByCreatedAtDesc(pageable)
-    }
-
     class ProductEventListener {
         +handleProductCreated()
         +handleProductActivated()
@@ -118,31 +132,18 @@ classDiagram
         +handleVariantPriceChanged()
     }
 
-    class ProductCardProjection {
-        +Long id
-        +String name
-        +String description
-        +UUID mainImageId
-        +String currency
-        +Long variantId
-        +BigDecimal basePrice
-        +BigDecimal discountAmount
-        +Instant offerEndsAt
-        +String offerType
-        +boolean hasRequiredAttributes
-    }
-
     HomePageController --> HomePageService
     HomePageService --> CategoryService
     HomePageService --> ProductReadService
     HomePageService --> CollectionService
-    HomePageService --> ProductCollectionRepository
     HomePageService --> HomePageDataDto
-    HomePageDataDto --> HomeCollectionSummaryDto
     HomePageDataDto --> HomeSectionDto
+    HomePageDataDto --> ProductCard
     HomeSectionDto --> HomeSectionStrategy
-    HomeSectionDto --> ProductCardProjection
-    ProductReadService --> ProductRepository
+    HomeSectionDto --> ProductCard
+    ProductReadService --> ProductCardLookupService
+    ProductCardLookupService --> ProductCardCache
+    ProductCardCache --> ProductRepository
     CollectionService --> ProductReadService
     ProductEventListener --> HomePageCacheService
 ```
@@ -156,39 +157,39 @@ sequenceDiagram
     participant Service as HomePageService
     participant Cache as homepage
     participant CategoryService
-    participant CollectionRepo as ProductCollectionRepository
+    participant CollectionService
     participant ProductRead as ProductReadService
 
-    Visitor->>Controller: GET /api/public/home?size=8
-    Controller->>Service: getHomePageData(8)
+    Visitor->>Controller: GET /api/public/home?size=8&categoryPage=0&categorySize=6
+    Controller->>Service: getHomePageData(size, categoryPage, categorySize)
 
     alt homepage cache hit
-        Service->>Cache: lookup(size key)
+        Service->>Cache: lookup(normalized request key)
         Cache-->>Service: HomePageDataDto
     else homepage cache miss
         Service->>CategoryService: getAllRoots()
         CategoryService-->>Service: root categories
-        Service->>CollectionRepo: findByIsActiveTrueOrderByCreatedAtDesc(page)
-        CollectionRepo-->>Service: featured collections
         Service->>ProductRead: getHomeProductIds(size)
         ProductRead-->>Service: featured product IDs
         Service->>ProductRead: getProductIdsForCategory(...)
         ProductRead-->>Service: category product IDs
+        Service->>CollectionService: collection-backed product IDs
+        CollectionService-->>Service: ordered collection product IDs
         Service->>ProductRead: getProductCardMap(allDistinctIds)
-        ProductRead-->>Service: Map<Long, ProductCardProjection>
-        Service->>Service: build sections from hydrated card map
+        ProductRead-->>Service: Map<Long, ProductCard>
+        Service->>Service: build top-level products and sections from hydrated cards
         Service->>Cache: put(HomePageDataDto)
     end
 
     Service-->>Controller: HomePageDataDto
-    Controller-->>Visitor: 200 OK + Cache-Control
+    Controller-->>Visitor: 200 OK + Cache-Control public max-age=120
 ```
 
 ## Batch Hydration Pipeline
 
 ```mermaid
 flowchart TD
-    A["Homepage wants multiple sections"] --> B["Collect IDs only"]
+    A["Homepage needs products for multiple sections"] --> B["Collect product IDs only"]
     B --> C["featured product IDs"]
     B --> D["category section IDs"]
     B --> E["collection section IDs"]
@@ -196,14 +197,27 @@ flowchart TD
     D --> F
     E --> F
     F --> G["ProductReadService.getProductCardMap(ids)"]
-    G --> H{"product_card cache hit?"}
-    H -- "Yes" --> I["reuse cached ProductCardProjection"]
-    H -- "No" --> J["accumulate missing IDs"]
-    J --> K["ProductRepository.findCardsByIds(missingIds)"]
-    K --> L["write misses back to product_card"]
-    I --> M["build ID -> card map"]
-    L --> M
-    M --> N["rebuild sections without extra repository reads"]
+    G --> H["ProductCardLookupService.getProductCardMap(ids)"]
+    H --> I{"product_card cache hit?"}
+    I -- "Yes" --> J["reuse cached ProductCard"]
+    I -- "No" --> K["load missing IDs"]
+    K --> L["ProductRepository.findCardsByIds(missingIds)"]
+    L --> M["write misses back to ProductCardCache"]
+    J --> N["build ID -> ProductCard map"]
+    M --> N
+    N --> O["assemble HomePageDataDto.products and sections"]
+```
+
+## Response Shape
+
+```mermaid
+flowchart LR
+    Home["HomePageDataDto"] --> Categories["categories"]
+    Home --> Products["products: List<ProductCard>"]
+    Home --> Sections["sections: List<HomeSectionDto>"]
+    Sections --> SectionProducts["section.products: List<ProductCard>"]
+
+    Collections["collections"] -. "not top-level in current response" .-> Sections
 ```
 
 ## Section Assembly Model
@@ -231,12 +245,12 @@ flowchart LR
     HomeReq["Homepage request"] --> HomeCache["homepage"]
     HomeCache --> HomeService["HomePageService"]
 
-    HomeService --> CategoryCache["categorie_attributs"]
+    HomeService --> CategoryCache["category/cache-backed roots"]
     HomeService --> CollectionCache["product_card_collections"]
     HomeService --> CardCache["product_card"]
 
-    CollectionCache --> CollectionIds["ordered product IDs only"]
-    CardCache --> ProductCards["ProductCardProjection"]
+    CollectionCache --> CollectionIds["ordered product IDs"]
+    CardCache --> ProductCards["ProductCard"]
     HomeCache --> HomePayload["HomePageDataDto"]
 ```
 
@@ -248,7 +262,7 @@ flowchart TD
     CollectionWrites["CollectionService mutations"] --> HomepageInvalidation["HomePageCacheService"]
     CategoryWrites["CategoryService mutations"] --> HomepageInvalidation
 
-    ProductListener --> ProductCardEvict["evict product_card / product_cache when product-bound"]
+    ProductListener --> ProductCardEvict["evict impacted ProductCardCache entries"]
     ProductListener --> HomepageInvalidation
 
     HomepageInvalidation --> HomeCache["homepage cache cleared"]
@@ -262,30 +276,4 @@ flowchart LR
     Controller --> Headers["Cache-Control: public, max-age=120"]
     Headers --> Edge["CDN / reverse proxy short reuse"]
     Controller --> Payload["HomePageDataDto"]
-```
-
-## Strategy State View
-
-```mermaid
-stateDiagram-v2
-    [*] --> ProductBased
-    ProductBased --> CategoryBased : root categories available
-    CategoryBased --> CollectionBased : public collections available
-    CollectionBased --> Static : derive editorial slice from featured products
-    Static --> Hybrid : merge featured + category + collection
-    Hybrid --> [*] : serialized into HomePageDataDto.sections
-```
-
-## Traffic-Oriented Read Model
-
-```mermaid
-flowchart TD
-    A["Cold request"] --> B["homepage cache miss"]
-    B --> C["batch ID collection"]
-    C --> D["batch card hydration"]
-    D --> E["assembled HomePageDataDto"]
-    E --> F["homepage cache write"]
-
-    G["Warm request"] --> H["homepage cache hit"]
-    H --> I["return payload without rebuilding sections"]
 ```

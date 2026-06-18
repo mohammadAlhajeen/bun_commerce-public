@@ -4,48 +4,29 @@
 
 ```mermaid
 flowchart LR
-    SellerProfile["Legacy store profile write model\ncom.bun.platform.store"] --> StoreRow["stores table"]
-    ProductDomain["Product domain\nProductDefinition + default Variant"] --> ProductTables["product_definitions + variants"]
-    SellerStore["Seller Store read module\ncom.bun.platform.sellerstore"] --> StoreRow
-    SellerStore --> ProductTables
-    SellerStore --> Cache["store_page_cache"]
-    PublicApi["GET /api/stores/{slug}"] --> SellerStore
-    Frontend["/store/{slug} page"] --> PublicApi
+    PublicApi["GET /api/stores/{slug}"] --> Controller["PublicSellerStoreController"]
+    Controller --> StorePage["SellerStorePageService"]
+
+    StorePage --> StoreProfile["stores table\npublic store profile"]
+    StorePage --> FullPageCache["store_page_cache"]
+    StorePage --> Catalog["StorefrontCatalogQueryService"]
+
+    Catalog --> CatalogRepo["StorefrontCatalogReadRepository"]
+    CatalogRepo --> StorefrontView["storefront_product_cards view"]
+    Catalog --> CardLookup["ProductCardLookupService"]
+    CardLookup --> CardCache["ProductCardCache"]
+    CardCache --> ProductRepo["ProductRepository.findCardsByIds"]
+    Catalog --> FacetCache["StorefrontFacetCache"]
+
+    GlobalSearch["GET /api/public/search"] --> StoreSearch["StoreSearchService"]
+    StoreSearch --> StoreSearchRepo["StoreSearchReadRepository"]
+    StoreSearchRepo --> StoreFts["stores.search_vector"]
 ```
 
 ## Class Diagram
 
 ```mermaid
 classDiagram
-    class Store {
-        +Long id
-        +Long sellerId
-        +String storeName
-        +String slug
-        +String description
-        +UUID logoImageId
-        +UUID bannerImageId
-        +boolean isActive
-        +String themeCode
-        +Instant createdAt
-        +Instant updatedAt
-    }
-
-    class SellerStore {
-        +Long storeId
-        +Long sellerId
-        +String storeName
-        +StoreSlug slug
-        +String description
-        +UUID logoImageId
-        +UUID bannerImageId
-        +boolean active
-        +Instant createdAt
-        +StoreTheme theme
-        +long totalProducts
-        +long activeOfferProductCount
-    }
-
     class StoreSlug {
         +String value
         +of()
@@ -59,10 +40,12 @@ classDiagram
     }
 
     class StorePageFilter {
+        +Long collectionId
         +Long categoryId
         +BigDecimal minPrice
         +BigDecimal maxPrice
         +String keyword
+        +String sort
         +normalized()
     }
 
@@ -72,29 +55,35 @@ classDiagram
         +String storeName
         +String slug
         +String publicPath
-        +String description
         +MediaUrlWithId logoImage
         +MediaUrlWithId bannerImage
         +boolean active
-        +Instant createdAt
         +String themeCode
         +long totalProducts
         +long activeOfferProductCount
+        +long totalSalesCount
     }
 
-    class StoreProductCardDto {
-        +Long productId
-        +String productName
-        +MediaUrlWithId mainImage
-        +BigDecimal defaultVariantEffectivePrice
-        +boolean hasActiveOffer
-        +Long sellerId
-        +boolean featured
+    class ProductCard {
+        +Long id
+        +String name
+        +UUID mainImageId
+        +Boolean isActive
+        +Integer salesCount
+        +String currency
+        +Long variantId
+        +BigDecimal basePrice
+        +BigDecimal discountAmount
+        +Instant offerEndsAt
+        +String offerType
+        +effectivePrice()
+        +hasActiveOffer()
+        +mainImageUrl()
     }
 
     class StorePageResponse {
         +StoreSummaryDto store
-        +List products
+        +List~ProductCard~ products
         +StoreAvailableFiltersDto filters
         +StoreAppliedFiltersDto appliedFilters
         +StorePaginationDto pagination
@@ -104,14 +93,45 @@ classDiagram
         +getStorePage()
     }
 
-    class StorePageReadRepository {
-        +findStoreSummaryBySlug()
-        +findStoreProductCards()
+    class StorefrontCatalogQueryService {
+        +getStorefrontPage()
+    }
+
+    class StorefrontCatalogPage {
+        +Page~ProductCard~ products
+        +List collections
+        +List categories
+        +StorefrontPriceBounds priceBounds
+        +StorefrontCatalogMetrics metrics
+    }
+
+    class StorefrontCatalogReadRepository {
+        +findStoreProductIds()
+        +findAvailableCollections()
         +findAvailableCategories()
         +findPriceBounds()
-        +findSlugBySellerId()
-        +findSlugByProductId()
-        +findSlugByVariantId()
+        +findStoreMetrics()
+    }
+
+    class ProductCardLookupService {
+        +getProductCardsByIds()
+        +getProductCardMap()
+        +getProductCard()
+    }
+
+    class ProductCardCache {
+        +get()
+        +getAll()
+        +invalidate()
+        +invalidateAll()
+    }
+
+    class StorefrontFacetCache {
+        +getCollections()
+        +getCategories()
+        +getPriceBounds()
+        +getMetrics()
+        +evictStore()
     }
 
     class StorePageCacheKeyFactory {
@@ -119,50 +139,44 @@ classDiagram
     }
 
     class StorePageCacheInvalidationService {
+        +evictByStoreId()
         +evictBySellerId()
         +evictByProductId()
         +evictByVariantId()
         +evictBySlug()
     }
 
-    class PublicSellerStoreController {
-        +getStoreBySlug()
+    class StoreSearchService {
+        +search()
     }
 
-    class ProductDefinition {
-        +Long id
-        +Long sellerId
-        +String name
-        +UUID mainImageId
-        +Boolean isActive
-        +Category category
+    class StoreSearchReadRepository {
+        +searchStores()
     }
 
-    class Variant {
-        +Long id
-        +boolean isDefault
-        +boolean isActive
-        +VariantPrice price
+    class StoreSearchResult {
+        +Long storeId
+        +String storeName
+        +String slug
+        +String publicPath
+        +MediaUrlWithId logoImage
+        +long totalProducts
     }
 
-    class VariantPrice {
-        +BigDecimal basePrice
-        +BigDecimal discountAmount
-        +Long activeOfferId
-        +Instant offerEndsAt
-    }
-
-    PublicSellerStoreController --> SellerStorePageService
-    SellerStorePageService --> StorePageReadRepository
     SellerStorePageService --> StorePageCacheKeyFactory
+    SellerStorePageService --> StorefrontCatalogQueryService
     SellerStorePageService --> StoreSummaryDto
-    SellerStorePageService --> StoreProductCardDto
     SellerStorePageService --> StorePageResponse
-    SellerStore --> StoreSlug
-    SellerStore --> StoreTheme
-    ProductDefinition "1" --> "1..*" Variant : owns
-    Variant --> VariantPrice
-    Store "1" --> "1" SellerStore : projected as
+    SellerStorePageService --> StoreSlug
+    SellerStorePageService --> StoreTheme
+    StorePageResponse --> ProductCard
+    StorefrontCatalogQueryService --> StorefrontCatalogReadRepository
+    StorefrontCatalogQueryService --> ProductCardLookupService
+    StorefrontCatalogQueryService --> StorefrontFacetCache
+    StorefrontCatalogPage --> ProductCard
+    ProductCardLookupService --> ProductCardCache
+    StoreSearchService --> StoreSearchReadRepository
+    StoreSearchService --> StoreSearchResult
 ```
 
 ## Store Page Read Sequence
@@ -173,47 +187,52 @@ sequenceDiagram
     participant Controller as PublicSellerStoreController
     participant Service as SellerStorePageService
     participant CacheKey as StorePageCacheKeyFactory
-    participant Repo as StorePageReadRepository
-    participant Cache as store_page_cache
+    participant PageCache as store_page_cache
+    participant Catalog as StorefrontCatalogQueryService
+    participant Repo as StorefrontCatalogReadRepository
+    participant Cards as ProductCardLookupService
+    participant Facets as StorefrontFacetCache
 
     Visitor->>Controller: GET /api/stores/{slug}?page=&size=&filters
     Controller->>Service: getStorePage(slug, filter, pageable)
     Service->>CacheKey: build(slug, filter, pageable)
-    CacheKey-->>Service: cache key
+    CacheKey-->>Service: store:{slug}:... key
 
-    alt cache hit
-        Service->>Cache: lookup(key)
-        Cache-->>Service: StorePageResponse
-    else cache miss
-        Service->>Repo: findStoreSummaryBySlug(slug)
-        Repo-->>Service: StoreSummaryProjection
-        Service->>Repo: findStoreProductCards
-        Repo-->>Service: paged product card projections
-        Service->>Repo: findAvailableCategories(slug)
-        Repo-->>Service: category facet projections
-        Service->>Repo: findPriceBounds(slug)
-        Repo-->>Service: StorePriceBoundsProjection
-        Service->>Cache: put(key, response)
+    alt full page cache hit
+        Service->>PageCache: lookup(key)
+        PageCache-->>Service: StorePageResponse
+    else full page cache miss
+        Service->>Service: resolve active store summary by slug
+        Service->>Catalog: getStorefrontPage(storeId, filter, pageable)
+        Catalog->>Repo: findStoreProductIds(...)
+        Repo-->>Catalog: Page<Long>
+        Catalog->>Cards: getProductCardsByIds(ids)
+        Cards-->>Catalog: List<ProductCard>
+        Catalog->>Facets: collections/categories/price bounds/metrics
+        Facets-->>Catalog: storefront filter metadata
+        Catalog-->>Service: StorefrontCatalogPage
+        Service->>PageCache: put(StorePageResponse)
     end
 
     Service-->>Controller: StorePageResponse
     Controller-->>Visitor: 200 OK
 ```
 
-## Product Card Query Pipeline
+## Product Listing Pipeline
 
 ```mermaid
 flowchart TD
-    A["stores.slug"] --> B["resolve seller scope"]
-    B --> C["join active product_definitions"]
-    C --> D["join active default variants only"]
-    D --> E["compute effective price from VariantPrice"]
-    E --> F["apply optional category filter"]
-    F --> G["apply keyword filter against product/category/tags"]
-    G --> H["apply min/max effective price filter"]
-    H --> I["mark featured products"]
-    I --> J["order by featured, sort_order, createdAt, productId"]
-    J --> K["return paged product card projection"]
+    A["Store slug"] --> B["resolve active store profile"]
+    B --> C["build StorefrontCatalogQuery"]
+    C --> D["StorefrontCatalogReadRepository.findStoreProductIds"]
+    D --> E["storefront_product_cards view"]
+    E --> F["apply collection/category/price/keyword/sort/page"]
+    F --> G["return ordered product IDs"]
+    G --> H["ProductCardLookupService"]
+    H --> I["ProductCardCache"]
+    I --> J["ProductRepository.findCardsByIds on cache miss"]
+    H --> K["Page<ProductCard>"]
+    K --> L["StorePageResponse.products"]
 ```
 
 ## Cache Invalidation Flow
@@ -221,37 +240,37 @@ flowchart TD
 ```mermaid
 flowchart LR
     ProductEvents["Product / Variant domain events"] --> Listener["StorePageCacheInvalidationListener"]
-    StoreWrites["StoreService writes"] --> Invalidation["StorePageCacheInvalidationService"]
-    Listener --> Invalidation
-    Invalidation --> Lookup["StorePageReadRepository slug lookup"]
-    Lookup --> Prefix["store:{slug}:* prefix"]
-    Prefix --> Cache["store_page_cache entries removed"]
+    Listener --> PageInvalidation["StorePageCacheInvalidationService"]
+    PageInvalidation --> SlugLookup["resolve store slug"]
+    SlugLookup --> PagePrefix["store:{slug}:*"]
+    PagePrefix --> StorePageCache["store_page_cache eviction"]
+
+    ProductWrites["Product lifecycle writes"] --> CardCache["ProductCardCache.invalidate"]
+    ProductWrites --> FacetCache["StorefrontFacetCache.evictStore"]
+    StoreWrites["Store profile writes"] --> PageInvalidation
 ```
 
-## Price SSOT Diagram
+## Store Search Sequence
 
 ```mermaid
-flowchart LR
-    Product["ProductDefinition"] -->|"no price field used"| Card["Store product card"]
-    Variant["Default Variant"] --> VariantPrice["basePrice + discountAmount + activeOfferId + offerEndsAt"]
-    VariantPrice --> Effective["effectivePrice projection"]
-    Effective --> Card
-```
+sequenceDiagram
+    actor Visitor
+    participant Global as GlobalSearchController
+    participant Search as GlobalSearchService
+    participant StoreSearch as StoreSearchService
+    participant Repo as StoreSearchReadRepository
+    participant Db as stores.search_vector
 
-## Filtering Model
-
-```mermaid
-flowchart LR
-    Request["StorePageFilter"] --> Category["categoryId"]
-    Request --> Price["minPrice / maxPrice"]
-    Request --> Keyword["keyword"]
-
-    Category --> Query["findStoreProductCards"]
-    Price --> Query
-    Keyword --> Query
-
-    Query --> Page["paged product cards"]
-    Query --> Summary["store-scoped filter bounds remain separate"]
+    Visitor->>Global: GET /api/public/search?q=keyword&type=store
+    Global->>Search: search(query, type, page, size)
+    Search->>StoreSearch: search(query, page, size)
+    StoreSearch->>Repo: search active stores
+    Repo->>Db: @@ ar_en_tsquery(:q), rank by ts_rank
+    Db-->>Repo: StoreSearchProjection page
+    Repo-->>StoreSearch: projections
+    StoreSearch-->>Search: SearchPage<StoreSearchResult>
+    Search-->>Global: UnifiedSearchResponse
+    Global-->>Visitor: 200 OK
 ```
 
 ## Store Profile State
@@ -261,18 +280,21 @@ stateDiagram-v2
     [*] --> Active : store row exists and is_active=true
     Active --> Inactive : store profile disabled
     Inactive --> Active : store profile re-enabled
-    Inactive --> [*] : hidden from public store page
+    Inactive --> [*] : hidden from public store page and store search
 ```
 
-## Future Extension View
+## Boundary Rule
 
 ```mermaid
-flowchart TD
-    A["Current seller store page"] --> B["Theme code only"]
-    A --> C["Featured product table"]
-    A --> D["Active-offer product count"]
+flowchart LR
+    SellerStore["sellerstore module"] --> Profile["store profile, page composition, full-page cache"]
+    SellerStore --> StoreSearch["store search result mapping"]
+    Catalog["catalog product module"] --> Cards["ProductCard shape and cache"]
+    Catalog --> Listing["storefront listing, facets, metrics"]
+    Global["global search module"] --> Combined["UnifiedSearchResponse"]
 
-    B --> E["Future theme registry / templates"]
-    C --> F["Seller-facing featured-product management"]
-    D --> G["Future aggregated store-level merchandising widgets"]
+    Profile --> Listing
+    Listing --> Cards
+    Combined --> Cards
+    Combined --> StoreSearch
 ```

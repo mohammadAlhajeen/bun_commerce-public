@@ -4,7 +4,7 @@
 
 ### Responsibilities
 
-- enforce one active seller-scoped cart per customer and seller
+- enforce one active store-scoped cart per customer and store
 - own cart item lifecycle
 - act as the only source of truth for current cart state
 - expose aggregate operations such as:

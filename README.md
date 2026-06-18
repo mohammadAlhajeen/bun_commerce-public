@@ -1,220 +1,148 @@
-# 🏷️ **Bun Commerce**
+# Bun Commerce Documentation
 
-_A Closed-Source Modular E-Commerce Platform_
+Public architecture documentation for **Bun Commerce**, a full-stack marketplace commerce platform built as a portfolio and product engineering project.
 
----
+This repository is intentionally documentation-focused. It does not contain the private application source code, production data, secrets, or a runnable deployment package. The goal is to show the engineering decisions, domain modeling, API boundaries, and system design behind the project.
 
-**Author:** Mohammed Alhajeen  
-**Project Type:** Commercial / Closed-Source Platform  
-**Status:** Active Development  
-**Architectural Origin:** Inspired by Suqnna Marketplace
+## Project Summary
 
----
+Bun Commerce models a marketplace-style commerce system with customer, seller, delivery, and admin workflows. The private implementation uses a Java/Spring backend and a Next.js storefront.
 
-## 🧭 Overview
+The platform covers:
 
-**Bun Commerce** is a commercial-grade e-commerce platform designed for long-term scalability, domain extensibility, and real-world operational constraints.
+- product catalog, variants, attributes, media, collections, offers, and search;
+- customer cart validation, price-change acknowledgement, checkout preview, and checkout confirmation snapshots;
+- order lifecycle, seller order handling, WhatsApp-oriented order requests, and public order lookup;
+- seller store pages, store profile editing, filtering, pagination, standardized product cards, and storefront caching;
+- delivery companies, drivers, shipment assignment, delivery status transitions, and tracking;
+- identity, JWT authentication, refresh sessions, role-based access, global product/store search, and rate limiting;
+- subscriptions, payment/wallet abstractions, geographic/address modeling, and media storage.
 
-- It is **not** a simple marketplace implementation.
-- Bun Commerce focuses on building a **reusable commerce engine** capable of supporting multiple business models, product types, and market contexts.
+No production users, revenue, or traction are claimed. This project is presented as evidence of software engineering work: domain design, architecture, persistence modeling, security thinking, API design, testing strategy, and deployment planning.
 
-The platform is architecturally inspired by the open research and experimentation conducted in the **Suqnna Marketplace** project, but is fully re-designed, hardened, and extended as a **private commercial system**.
+## Why This Repo Exists
 
----
+For hiring reviewers, this public repository answers:
 
-## 🧠 Design Philosophy
+- What kind of system did I build?
+- How did I divide the system into domains?
+- What business rules and invariants did I model?
+- How do cart, checkout, order, delivery, catalog, and identity interact?
+- What trade-offs did I document?
+- Where are the known gaps and future improvements?
 
-Bun Commerce is built around one core principle:
+The private source repository contains implementation details. This public repository exposes the architectural reasoning.
 
-> **E-commerce systems should evolve — not be rewritten.**
+## Architecture Overview
 
-To support this, the platform emphasizes:
+Bun Commerce is designed as a modular monolith with microservice-ready boundaries. Each major domain owns its own model, service layer, persistence concerns, DTO/API contract, and documented invariants.
 
-- **Strong domain boundaries**
-- **Explicit business rules**
-- **Minimal operational assumptions**
-- **Controlled system growth**
-- **Intellectual property protection**
+Main domains:
 
----
+| Domain | Responsibility |
+| --- | --- |
+| App User | Customer/seller/admin profile concerns and account-facing user workflows |
+| Identity | Authentication, JWT access tokens, refresh-token sessions, public identity mapping, account security |
+| Catalog | Categories, attributes, products, variants, inventory, product cards, collections, offers, search |
+| Cart | Store-scoped carts, item snapshots, validation engine, reconciliation, price and stock repair |
+| Checkout | Stateless preview and immutable checkout confirmation snapshots before order creation |
+| Order | Committed commercial transactions, seller/customer/admin order views, lifecycle transitions |
+| Seller Store | Public seller storefront read model, slug routing, filtering, pagination, cache invalidation |
+| Delivery | Delivery companies, drivers, shipment assignment, shipment state transitions |
+| Address | Country/state/city/street hierarchy, user addresses, delivery address snapshots |
+| Subscription | Plans, subscription lifecycle, usage limits, payment simulation hooks |
+| Homepage | Public homepage payload assembly and product-card optimization |
 
-## 🏗️ Core Platform Capabilities
+## Documentation Map
 
-| Capability                        | Description                                                                |
-| --------------------------------- | -------------------------------------------------------------------------- |
-| **Multi-Tenant Commerce Engine**  | Supports independent companies operating within a shared infrastructure.   |
-| **Advanced Product Modeling**     | Flexible catalog with dynamic attributes, variants, and customization.     |
-| **Order-Centric Architecture**    | Orders modeled as first-class domain entities with clear lifecycle states. |
-| **Deposit & Pre-Order Support**   | Native support for partial payments and handmade/pre-order workflows.      |
-| **Escrow-Oriented Wallet Logic**  | Transaction flows designed for safety, reversibility, and auditability.    |
-| **Modular Pricing Rules**         | Pricing logic isolated from products to support future strategies.         |
-| **Role-Separated Access Control** | Clear separation of customer, company, and operational roles.              |
-| **Arabic-Ready Search Layer**     | Optimized PostgreSQL Full-Text Search for Arabic content.                  |
-| **Scalable Modular Backend**      | Designed as a modular monolith with microservice-ready boundaries.         |
+Start here:
 
----
+- [Current Architecture Refactor](documentation/14-current-architecture-refactor.md)
+- [Product Domain](documentation/02-product-domain.md)
+- [Cart Architecture](documentation/cart/01-architecture-overview.md)
+- [Cart Validation Engine](documentation/cart/03-validation-engine.md)
+- [Checkout Domain](documentation/10-checkout-domain.md)
+- [Order Domain](documentation/11-order-domain.md)
+- [Seller Store Domain](documentation/12-seller-store-domain.md)
+- [Identity Domain](documentation/04-identity-domain.md)
+- [Delivery Domain](documentation/09-delivery-domain.md)
+- [Subscription Domain](documentation/07-subscription-domain.md)
+- [Homepage Backend](documentation/13-homepage-backend.md)
+- [Standardized Product Card Refactor](documentation/standardized-product-card-refactor.md)
 
-## 🧩 Domain-Driven Module Structure
+UML-oriented notes are also available next to the domain documents, for example:
 
-| Module           | Responsibility                                      |
-| ---------------- | --------------------------------------------------- |
-| **Architecture** | System boundaries and core abstractions             |
-| **Media**        | Media ownership, validation, and lifecycle          |
-| **Company**      | Company isolation and storefront identity           |
-| **Catalog**      | Products, attributes, and customization logic       |
-| **Cart**         | Multi-company cart aggregation and validation       |
-| **Order**        | Order lifecycle and state transitions               |
-| **Shipment**     | Delivery workflows and assignment                   |
-| **Wallet**       | Escrow and transaction abstraction                  |
-| **Security**     | Authentication and authorization boundaries         |
-| **Data**         | PostgreSQL schema, indexing, and query optimization |
+- [Product UML](documentation/02-product-uml.md)
+- [Cart UML](documentation/08-cart-uml.md)
+- [Checkout UML](documentation/10-checkout-uml.md)
+- [Order UML](documentation/11-order-uml.md)
+- [Seller Store UML](documentation/12-seller-store-uml.md)
 
----
+## Technical Stack
 
-## ⚙️ Technology Stack
+Private implementation stack:
 
-- **Language:** Java 25
-- **Framework:** Spring Boot 3.x
-- **Database:** PostgreSQL 17
-- **Authentication:** JWT + RBAC
-- **Search:** PostgreSQL Full-Text Search (Arabic)
-- **Containerization:** Docker & Docker Compose
-- **Deployment:** Nginx-based container stack
+- Java 25
+- Spring Boot
+- Spring Web MVC, Spring Security, Spring Data JPA, Spring Validation, Spring Actuator
+- PostgreSQL/PostGIS
+- Flyway migrations
+- Hibernate/JPA
+- Caffeine caching
+- JWT authentication
+- Springdoc OpenAPI
+- Next.js, React, TypeScript, Tailwind CSS, Radix UI
+- Docker Compose and Nginx deployment planning
 
----
+## Engineering Highlights
 
-## 🔒 Source Code & Access
+- Modular domain documentation across catalog, cart, checkout, order, delivery, identity, seller-store, subscription, address, and homepage modules.
+- Current-branch read-model documentation for standardized `ProductCard`, store pages, FTS-backed product/store search, and global search.
+- Cart validation model with deterministic validators, reconciliation modes, item repair, item removal, stock checks, and price-change acknowledgement.
+- Checkout design that separates mutable cart state from immutable commercial confirmation snapshots.
+- Product model with variants, tracked inventory, default variant rules, active/inactive lifecycle, collection membership, and cache-aware reads.
+- Seller-store read model with slug-based public pages, product-card projection, filtering, pagination, and cache invalidation.
+- Identity model with JWT access, refresh-token rotation, public identity mapping, account state checks, and documented security risks.
+- Delivery model with driver/company workflows, shipment assignment, and delivery state transitions.
+- Written trade-off sections that identify what is implemented, what is intentionally deferred, and what should be improved before production use.
 
-This repository represents a **closed-source commercial platform**.
+## CV Bullets
 
-- ✅ Source code is **private**
-- ✅ Business logic and domain rules are **protected**
-- ✅ Public access is **intentionally limited**
-- ⚠️ **This is NOT open-source software**
+```text
+Built and documented a full-stack marketplace commerce platform with Java/Spring Boot, PostgreSQL/Flyway, Docker-oriented deployment, and a Next.js/React storefront.
 
-Architectural discussions, diagrams, and conceptual explanations may be shared independently.
+Designed modular backend domains for catalog, cart, checkout, orders, delivery, identity, subscriptions, media, addresses, and seller storefronts.
 
----
+Modeled real commerce workflows including product variants, tracked inventory, cart reconciliation, checkout snapshots, order lifecycle, seller store pages, delivery assignment, and public product/store search.
 
-## 🧬 Relationship to Suqnna Marketplace
-
-**Bun Commerce** is an **independently developed, closed-source commercial platform**.
-
-Some early architectural ideas and domain modeling experiments were informed by
-lessons learned from **Suqnna Marketplace**, an academic prototype released
-under the MIT License.
-
-Bun Commerce is **not a continuation** of the Suqnna project and is **not affiliated**
-with the original graduation team.
-
----
-
-## 📚 Open-Source References and Acknowledgements
-
-### 1) Suqnna Marketplace (MIT License)
-
-**Suqnna Marketplace** was released under the **MIT License**:
-
-```
-MIT License
-
-© 2025 Suqnna Graduation Team
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.
+Documented architecture, domain invariants, API contracts, persistence models, trade-offs, and improvement areas across the platform.
 ```
 
----
+Short version:
 
-### 2) Arabic Stopwords Collection by Gene Diaz (MIT License)
-
-Bun Commerce includes components derived from an Arabic stopwords collection
-originally authored by **Gene Diaz** and released under the **MIT License**.
-
-```
-The MIT License (MIT)
-
-Copyright (c) 2016 Gene Diaz
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.
+```text
+Bun Commerce - Full-stack marketplace platform documentation: Java/Spring backend architecture, PostgreSQL/Flyway persistence design, Next.js storefront workflows, catalog/cart/checkout/order/delivery/seller domains, and detailed domain trade-offs.
 ```
 
----
+## Reviewer Notes
 
-## 🔍 Clear Separation
+Strongest signals:
 
-- **Suqnna Marketplace**
-  Open-source academic prototype (MIT Licensed)
-  Research, experimentation, and validation only
+- broad product scope across customer, seller, delivery, and admin workflows;
+- strong domain modeling discipline;
+- realistic commerce rules around inventory, cart validation, checkout snapshots, and order lifecycle;
+- documented persistence and API boundaries;
+- explicit trade-offs and known improvement areas.
 
-- **Arabic Stopwords Collection (Gene Diaz)**
-  Open-source linguistic dataset (MIT Licensed)
-  Attribution-only dependency
+Current public-repo limitations:
 
-- **Bun Commerce**
-  Closed-source proprietary product
-  Independently engineered commercial platform
+- source code is private and not included here;
+- this repository is not runnable by itself;
+- screenshots and a short demo video should still be added;
+- some older detailed docs may contain implementation notes that should be reviewed before broad public sharing.
 
-Bun Commerce does **not** redistribute the Suqnna source code or the original
-Arabic stopwords dataset.
+## Ownership
 
-It only leverages:
+Copyright (c) 2026 Mohammed Alhajeen.
 
-- ✅ Architectural patterns validated during academic research
-- ✅ Domain modeling experiments refined through prototyping
-- ✅ Technical trade-offs documented during early design iterations
-- ✅ Linguistic normalization logic derived from open datasets
-
-> **Suqnna served as a research prototype.**
-> **Open-source datasets informed early design.**
-> **Bun Commerce delivers the commercial-grade system.**
-
----
-
-## 🌱 Long-Term Vision
-
-To evolve **Bun Commerce** into a **general-purpose commerce engine** capable of
-powering multiple regional and vertical marketplaces without architectural rewrites.
-
----
-
-## 🧠 Final Legal Note
-
-Bun Commerce is built with **product responsibility**, **engineering discipline**,
-and **long-term ownership** in mind.
-
-It prioritizes **correctness**, **evolution**, and **sustainability** over feature count.
-
-All third-party components are used in compliance with their respective licenses.
-Full license texts are included above for transparency and legal completeness.
+Bun Commerce is a private software project. This public repository is provided as architecture and portfolio documentation only. Do not treat it as an open-source implementation.

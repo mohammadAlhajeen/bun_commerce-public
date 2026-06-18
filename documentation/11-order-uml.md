@@ -7,7 +7,6 @@ flowchart LR
     Checkout["Checkout domain\nimmutable commercial snapshot"] -->|CheckoutOrderFactory.buildOrder| Order["Order domain\ncommitted transaction"]
     Order -->|read by| Shipment["Shipment domain\ndelivery tracking"]
     Order -->|read by| Inventory["Inventory domain\nproduction flag"]
-    Order -->|references| Address["Address domain\ndelivery address"]
 
     Customer["Customer\nrole: CUSTOMER"] -->|cancel| Order
     Seller["Seller\nrole: SELLER"] -->|confirm / process / complete / cancel| Order
@@ -30,7 +29,7 @@ classDiagram
         +Long sellerId
         +OrderStatus status
         +PaymentStatus paymentStatus
-        +Address deliveryAddress
+        +OrderAddressSnapshot deliveryAddress
         +String deliveryUrlLocation
         +String deliveryNotes
         +String customerContactName
@@ -63,15 +62,13 @@ classDiagram
         +String variantName
         +OrderItemType type
         +BigDecimal unitPriceBase
-        +BigDecimal unitPriceExtra
         +BigDecimal unitPrice
         +BigDecimal lineDiscount
         +BigDecimal lineTotal
         +Integer qtyOrdered
-        +boolean allowBackorder
-        +boolean productionRequired
-        +Float preparationDays
-        +markProductionRequired()
+        +addSelection()
+        +markAsPreOrder()
+        +requiresProduction()
     }
 
     class OrderItemSelection {
@@ -80,7 +77,6 @@ classDiagram
         +String attributeName
         +Long valueId
         +String valueText
-        +BigDecimal extraPrice
     }
 
     class OrderStatus {
@@ -105,17 +101,11 @@ classDiagram
         PRE_ORDER
     }
 
-    class Address {
-        +Long id
-        +String name
-    }
-
     Order "1" *-- "0..*" OrderItem : items
     OrderItem "1" *-- "0..*" OrderItemSelection : selections
     Order --> OrderStatus
     Order --> PaymentStatus
     OrderItem --> OrderItemType
-    Order --> Address : deliveryAddress
 ```
 
 ---
@@ -156,11 +146,11 @@ sequenceDiagram
 
     CAS->>COF: buildOrder(checkout)
     COF->>COF: new Order()
-    COF->>COF: set customerId, sellerId, deliveryAddress, contact, shippingFee, discount
+    COF->>COF: copy checkoutId, sourceCartId, delivery snapshot, contact, shipping, discount
     loop for each CheckoutItem
-        COF->>COF: new OrderItem(productId, variantId, names, pricing, lineDiscount, qty, type)
+        COF->>COF: new OrderItem(productId, variantId, names, pricing, qty, type)
         loop for each CheckoutItemSelection
-            COF->>COF: new OrderItemSelection(attributeId, name, valueId, valueText, extraPrice)
+            COF->>COF: new OrderItemSelection(attributeId, attributeName, valueId, valueText)
         end
         COF->>COF: orderItem.addSelection(selection)
         COF->>COF: order.addItem(orderItem)
@@ -168,54 +158,9 @@ sequenceDiagram
     COF->>COF: order.recomputeTotals()
     COF-->>CAS: Order
 
-    CAS->>CAS: order.setCheckoutId(checkout.getId())
     CAS->>OR: save(order)
-    OR-->>CAS: savedOrder (with generated id and orderNumber)
+    OR-->>CAS: savedOrder
     CAS->>CR: save(checkout.attachOrder(orderId, orderNumber))
-```
-
----
-
-## Customer Cancel Flow
-
-```mermaid
-sequenceDiagram
-    participant C as Customer (REST)
-    participant OC as OrderController
-    participant OS as OrderService
-    participant OR as OrderRepository
-
-    C->>OC: POST /api/customer/orders/{orderId}/cancel
-    OC->>OS: cancelOrderByCustomer(customerId, orderId, request)
-    OS->>OR: lockByIdAndCustomerId(orderId, customerId)
-    OR-->>OS: Order (PESSIMISTIC_WRITE lock)
-    OS->>OS: ensureCancellable(order) - throws CONFLICT if terminal
-    OS->>OS: order.cancel(CUSTOMER_CANCELLED, reason, now)
-    OS->>OR: save(order)
-    OC-->>C: 200 OK
-```
-
----
-
-## Seller Lifecycle Flow
-
-```mermaid
-sequenceDiagram
-    participant S as Seller (REST)
-    participant OC as OrderController
-    participant OS as OrderService
-    participant OR as OrderRepository
-
-    S->>OC: POST /api/seller/orders/{orderId}/confirm
-    OC->>OS: confirmOrder(sellerId, orderId)
-    OS->>OR: lockById(orderId)
-    OR-->>OS: Order (PESSIMISTIC_WRITE lock)
-    OS->>OS: verify sellerId matches
-    OS->>OS: verify status == CREATED
-    OS->>OS: order.confirm(now)
-    OS->>OR: save(order)
-    OC-->>S: 200 OrderResponse
-
 ```
 
 ---

@@ -41,7 +41,7 @@ The Cart domain documentation now lives in `documentation/cart/` and is organize
 | Method | Path | Description |
 |--------|------|-------------|
 | `GET` | `/api/cart/my` | Get all open carts for the authenticated customer |
-| `GET` | `/api/cart/my/{sellerId}` | Get cart for a specific seller with live validation |
+| `GET` | `/api/cart/my/{storeId}` | Get cart for a specific store with live validation |
 | `GET` | `/api/cart/my/cart/{cartId}` | Get a specific cart by ID |
 | `GET` | `/api/cart/my/cart/{cartId}/summary` | Get live item summary (prices + image) |
 | `POST` | `/api/cart/add` | Add an item — customerId from JWT |

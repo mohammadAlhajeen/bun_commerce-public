@@ -2,7 +2,7 @@
 
 ## Purpose
 
-The Cart domain owns seller-scoped shopping carts and reconciles them against current catalog and inventory data without scattering business rules across application services.
+The Cart domain owns store-scoped shopping carts and reconciles them against current catalog and inventory data without scattering business rules across application services.
 
 ## Core design
 

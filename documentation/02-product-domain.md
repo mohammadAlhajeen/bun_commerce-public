@@ -45,7 +45,7 @@ Main concerns:
 
 ### `ProductDefinition`
 
-**Kind:** aggregate root entity  
+**Kind:** aggregate root entity
 **Package:** `com.bun.platform.catalog.product`
 
 #### Description
@@ -71,7 +71,7 @@ Represents a seller-owned product definition visible in the catalog.
 - `averageRating`
 - `salesCount`
 - `version`
-- `sellerId`
+- `storeId`
 - `category`
 - `variants`
 - `productCollectionItems`
@@ -86,11 +86,11 @@ Represents a seller-owned product definition visible in the catalog.
 - mapped to `product_definitions`
 - soft delete enabled
 - optimistic locking through `version`
-- seller relation stored as scalar `sellerId`
+- store relation stored as scalar `storeId`
 
 ### `Variant`
 
-**Kind:** entity  
+**Kind:** entity
 **Package:** `com.bun.platform.catalog.product`
 
 #### Description
@@ -136,7 +136,7 @@ Represents a concrete purchasable variant of a product.
 
 ### `Inventory`
 
-**Kind:** entity  
+**Kind:** entity
 **Package:** `com.bun.platform.catalog.product`
 
 #### Description
@@ -183,7 +183,7 @@ This model is intentionally minimal:
 
 ### `VariantPrice`
 
-**Kind:** embeddable value object  
+**Kind:** embeddable value object
 **Package:** `com.bun.platform.catalog.product`
 
 #### Description
@@ -200,7 +200,7 @@ Stores price and active-offer state for a variant.
 
 ### `VariantAttribute`
 
-**Kind:** entity  
+**Kind:** entity
 **Package:** `com.bun.platform.catalog.product`
 
 #### Description
@@ -227,7 +227,7 @@ Represents an attribute instance attached to a specific variant.
 
 ### `VariantAttributeSelection`
 
-**Kind:** entity  
+**Kind:** entity
 **Package:** `com.bun.platform.catalog.product`
 
 #### Description
@@ -243,7 +243,7 @@ Represents one selectable value inside a variant attribute.
 
 ### `VariantMedia`
 
-**Kind:** entity  
+**Kind:** entity
 **Package:** `com.bun.platform.catalog.product`
 
 #### Description
@@ -260,7 +260,7 @@ Represents a media reference owned by a variant.
 
 ### `Tag`
 
-**Kind:** entity  
+**Kind:** entity
 **Package:** `com.bun.platform.catalog.product`
 
 #### Description
@@ -273,7 +273,7 @@ Represents a reusable product label shared across many products.
 
 ### `ProductCollection`
 
-**Kind:** aggregate root entity  
+**Kind:** aggregate root entity
 **Package:** `com.bun.platform.catalog.product`
 
 #### Description
@@ -292,7 +292,7 @@ Represents a seller-curated collection used for storefront presentation.
 - `name`
 - `slug`
 - `description`
-- `sellerId`
+- `storeId`
 - `isActive`
 - `deleted`
 - `mediaItemId`
@@ -308,7 +308,7 @@ Represents a seller-curated collection used for storefront presentation.
 
 ### `ProductCollectionItem`
 
-**Kind:** entity  
+**Kind:** entity
 **Package:** `com.bun.platform.catalog.product`
 
 #### Description
@@ -334,7 +334,7 @@ Represents membership of one product inside one collection with an explicit orde
 
 ### `ProductService`
 
-**Kind:** application service  
+**Kind:** application service
 **Package:** `com.bun.platform.catalog.product.service`
 
 #### Description
@@ -390,7 +390,7 @@ Strict failures in this method:
 
 ### `VariantService`
 
-**Kind:** application service  
+**Kind:** application service
 **Package:** `com.bun.platform.catalog.product.service`
 
 #### Description
@@ -431,7 +431,7 @@ Observed tolerance behavior:
 
 ### `ProductVariantService`
 
-**Kind:** application service  
+**Kind:** application service
 **Package:** `com.bun.platform.catalog.product.service`
 
 #### Description
@@ -441,7 +441,7 @@ Owns variant lifecycle operations inside an existing product aggregate.
 #### Main Operations
 
 - `addVariant(Long, Long, CreateVariantDTO)`
-- `addTrackedVariant(Long, CreateTrackedVariantDTO)`
+- `addTrackedVariant(Long storeId, Long sellerUserId, CreateTrackedVariantDTO)`
 - `removeVariant(Long, Long, Long)`
 - `changeDefaultVariant(Long, Long, Long)`
 - `activateVariant(Long, Long, Long)`
@@ -461,7 +461,7 @@ Owns variant lifecycle operations inside an existing product aggregate.
 
 ### `InventoryService`
 
-**Kind:** application service  
+**Kind:** application service
 **Package:** `com.bun.platform.catalog.product.service`
 
 #### Description
@@ -493,7 +493,7 @@ Owns the simple tracked-inventory model used by `InventoryPolicy.TRACKED`.
 
 ### `InventoryRepository`
 
-**Kind:** infrastructure repository  
+**Kind:** infrastructure repository
 **Package:** `com.bun.platform.catalog.product.repository`
 
 #### Description
@@ -516,7 +516,7 @@ Owns atomic persistence operations for tracked inventory.
 
 ### `ProductReadService`
 
-**Kind:** query service  
+**Kind:** query service
 **Package:** `com.bun.platform.catalog.product.service`
 
 #### Description
@@ -539,7 +539,7 @@ Builds full product DTOs and lightweight product-card reads.
 
 ### `ProductViewService`
 
-**Kind:** query facade  
+**Kind:** query facade
 **Package:** `com.bun.platform.catalog.product.service`
 
 #### Description
@@ -548,7 +548,7 @@ Public-facing facade that wraps active product reads and emits view events with 
 
 ### `CollectionService`
 
-**Kind:** application service  
+**Kind:** application service
 **Package:** `com.bun.platform.catalog.product.service`
 
 #### Description
@@ -572,7 +572,7 @@ Owns collection lifecycle, membership, ordering, and public storefront retrieval
 
 ### `ProductCacheService`
 
-**Kind:** infrastructure-facing application service  
+**Kind:** infrastructure-facing application service
 **Package:** `com.bun.platform.catalog.product.service`
 
 #### Description
@@ -589,11 +589,257 @@ Provides two-level cache support for storefront product-card retrieval.
 - product-card cache entries are evicted for impacted products
 - collection cache entries are evicted after collection membership and collection metadata changes
 
+### `ProductCard`
+
+**Kind:** public read-model record
+**Package:** `com.bun.platform.catalog.product.product_dtos`
+
+#### Description
+
+The standardized public product-card shape used across the storefront.
+
+Current consumers include:
+
+- public product listing;
+- public product search;
+- public collection pages;
+- public store pages;
+- homepage product rails;
+- global search product results.
+
+Key fields:
+
+- `id`
+- `name`
+- `description`
+- `mainImageId`
+- `isActive`
+- `salesCount`
+- `currency`
+- `variantId`
+- `basePrice`
+- `discountAmount`
+- `offerEndsAt`
+- `offerType`
+- `hasRequiredAttributes`
+
+Behavioral helpers:
+
+- `effectivePrice()`
+- `mainImageUrl()`
+- `hasActiveOffer()`
+
+Current rule:
+
+- `ProductCard` is the public card contract. Store pages should not remap it into a store-specific product DTO.
+
+### `ProductCardCache`
+
+**Kind:** Caffeine loading cache
+**Package:** `com.bun.platform.catalog.product.service`
+
+#### Description
+
+Caches public `ProductCard` records by product ID.
+
+Configuration:
+
+- maximum size: `15,000`
+- TTL: `32 minutes`
+
+Behavior:
+
+- single-card misses call `ProductRepository.findCardById(id)`;
+- bulk misses call `ProductRepository.findCardsByIds(ids)`;
+- bulk reads preserve caller order;
+- missing products are omitted from bulk results;
+- invalidation is by product ID or collection of product IDs.
+
+### `ProductCardLookupService`
+
+**Kind:** read helper service
+**Package:** `com.bun.platform.catalog.product.service`
+
+#### Description
+
+Provides the normalized access path into `ProductCardCache`.
+
+Responsibilities:
+
+- remove duplicate product IDs while preserving order;
+- ignore `null` product IDs;
+- return ordered `List<ProductCard>` results;
+- return `Map<Long, ProductCard>` results for homepage/section assembly;
+- throw a product-not-found exception when a single requested card does not exist.
+
+### `StorefrontCatalogQueryService`
+
+**Kind:** storefront query service
+**Package:** `com.bun.platform.catalog.product.storefront`
+
+#### Description
+
+Owns store-scoped public catalog listing.
+
+It returns a `StorefrontCatalogPage` containing:
+
+- `Page<ProductCard>`;
+- available collections;
+- available categories;
+- price bounds;
+- store catalog metrics.
+
+The read flow is ID-first:
+
+1. `StorefrontCatalogReadRepository` returns a page of product IDs from `storefront_product_cards`.
+2. `ProductCardLookupService` hydrates those IDs through the card cache.
+3. Facets and metrics come from `StorefrontFacetCache`.
+
+Supported filters:
+
+- store ID;
+- collection ID;
+- category ID;
+- min/max effective price;
+- keyword;
+- sort;
+- pageable.
+
+### `StorefrontFacetCache`
+
+**Kind:** Caffeine cache service
+**Package:** `com.bun.platform.catalog.product.storefront`
+
+#### Description
+
+Caches store-scoped filter metadata independently from product cards and page responses.
+
+Cache boundaries:
+
+| Cache | Key | Size | TTL |
+| --- | --- | ---: | --- |
+| collections | `storeId` | 1,000 | 10 minutes |
+| categories | `storeId:collectionId` | 2,000 | 10 minutes |
+| price bounds | `storeId:collectionId` | 2,000 | 5 minutes |
+| metrics | `storeId` | 1,000 | 5 minutes |
+
+`evictStore(storeId)` clears all facet and metric entries for one store.
+
+### `SellerCatalogQueryService`
+
+**Kind:** seller query service
+**Package:** `com.bun.platform.catalog.product.seller`
+
+#### Description
+
+Owns seller-facing product list reads.
+
+It uses the seller read model rather than public `ProductCard` because sellers need management fields such as active state, category ID, variant state, and timestamps.
+
+### `PostgresProductSearchEngine`
+
+**Kind:** product search engine
+**Package:** `com.bun.platform.catalog.product.search`
+
+#### Description
+
+Searches active public products using PostgreSQL full-text search.
+
+Current scope:
+
+- keyword-only search;
+- pagination;
+- relevance sorting;
+- active products only;
+- active default variant required.
+
+The engine returns ranked product IDs. `ProductReadService.searchActiveProductCards(...)` hydrates those IDs into `ProductCard` through the shared product-card lookup path.
+
+### `SearchEngineRouter`
+
+**Kind:** search routing component
+**Package:** `com.bun.platform.catalog.product.search`
+
+#### Description
+
+Routes `ProductSearchEngine` calls by configured search mode.
+
+Modes:
+
+- `POSTGRES_ONLY`
+- `ELASTIC_SHADOW`
+- `ELASTIC_PRIMARY`
+- `POSTGRES_FALLBACK`
+
+This keeps the Postgres FTS implementation usable as the primary engine while preserving a migration path for Elasticsearch.
+
+### `ProductSearchResultCache`
+
+**Kind:** search result cache
+**Package:** `com.bun.platform.catalog.product.search`
+
+#### Description
+
+Caches ranked product-ID pages, not full cards.
+
+Configuration:
+
+- maximum entries: `2,000`
+- TTL: `60 seconds`
+
+Key:
+
+- canonical query;
+- page;
+- size.
+
+Reason:
+
+- search ranking pages are cheap to cache separately;
+- product-card freshness remains controlled by `ProductCardCache`.
+
+### `SearchQueryNormalizer`
+
+**Kind:** query canonicalizer
+**Package:** `com.bun.platform.catalog.product.search`
+
+#### Description
+
+Normalizes search text for cache keys.
+
+It canonicalizes:
+
+- casing;
+- whitespace;
+- Arabic ligatures and letter forms;
+- Arabic and extended Arabic digits;
+- Arabic diacritics and tatweel;
+- zero-width and bidi control characters;
+- Latin accents.
+
+PostgreSQL search functions remain authoritative for search semantics. Java-side normalization is only a cache-key optimization.
+
+### Global Search Integration
+
+The product domain participates in global search through `GlobalSearchService`.
+
+Product side:
+
+- `ProductReadService.searchActiveProductCards(...)`
+- `PostgresProductSearchEngine`
+- `SearchPage<ProductCard>`
+
+Global endpoint:
+
+- `GET /api/public/search`
+
+The global search module exists outside catalog and seller-store so the two domains do not depend on each other directly.
+
 ## REST API Reference
 
 ### Seller Product Management
 
-**Controller:** `SellerProductController`  
+**Controller:** `SellerProductController`
 **Base path:** `/api/seller/products`
 
 #### Product Operations
@@ -616,7 +862,7 @@ Provides two-level cache support for storefront product-card retrieval.
 
 #### Tracked Variant Operations
 
-**Controller:** `SellerVariantController`  
+**Controller:** `SellerVariantController`
 **Base path:** `/api/variants`
 
 - `POST /tracked`
@@ -624,6 +870,7 @@ Provides two-level cache support for storefront product-card retrieval.
 #### Authentication Model
 
 - seller identity resolved from JWT through `UserIdentityService`
+- target `storeId` supplied as `?storeId=` query parameter on all seller endpoints
 
 #### Create Product Endpoint Behavior
 
@@ -649,17 +896,43 @@ Documented strictness boundary:
 
 ### Public Product API
 
-**Controller:** `PublicProductController`  
+**Controller:** `PublicProductController`
 **Base path:** `/api/public/products`
 
 #### Endpoints
 
+- `GET /`
+- `GET /search?q=...`
 - `GET /{id}`
 - `GET /card/{id}`
+- `GET /by-category/{slug}`
+
+### Public Global Search API
+
+**Controller:** `GlobalSearchController`
+**Base path:** `/api/public/search`
+
+#### Endpoint
+
+- `GET /api/public/search?q={keyword}`
+
+Optional parameters:
+
+- `type=product`
+- `type=store`
+- `page`
+- `size`
+
+Response:
+
+- `UnifiedSearchResponse`
+  - `query`
+  - `products: SearchPage<ProductCard>`
+  - `stores: SearchPage<StoreSearchResult>`
 
 ### Public Collection API
 
-**Controller:** `PublicCollectionController`  
+**Controller:** `PublicCollectionController`
 **Base path:** `/api/public/collections`
 
 #### Endpoints
@@ -924,7 +1197,7 @@ Published event types observed in the implementation:
 - seller write operations require `ROLE_SELLER`
 - some service methods provide admin-only variants
 - public product and collection reads are unauthenticated
-- ownership checks compare the stored `sellerId` against the authenticated seller
+- ownership checks verify the store belongs to the authenticated seller via `SellerStoreService.getByIdForSeller(storeId, sellerId)`
 
 ## Implementation Notes
 

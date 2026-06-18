@@ -1,88 +1,53 @@
-# 🏷️ **Suqnna Marketplace**  
-*A Modern E-Commerce Platform Celebrating Palestinian Heritage.*
+# Bun Commerce Public Documentation
 
----
+This folder is the public documentation entry point for Bun Commerce.
 
-**Author:** Mohammed Alhajeen  
-**Project:** Suqnna Marketplace — Palestinian Heritage Commerce Platform  
-**License:** MIT License © 2025 Mohammed Alhajeen  
+Bun Commerce is a marketplace commerce platform designed around modular domain boundaries, realistic commerce workflows, and documented trade-offs. The application source code is private; this repository shares architectural notes and domain references for portfolio review.
 
----
+## Main Documentation
 
-## 🧭 Overview
+Recommended reading order:
 
-**Suqnna** is a next-generation e-commerce platform that empowers **Palestinian artisans and small businesses** to sell handcrafted and ready-made products online.  
-It is not a regular e-commerce system — it integrates **cultural identity**, **financial safety**, and **modular scalability**.
+1. [Product Domain](../../documentation/02-product-domain.md)
+2. [Cart Architecture](../../documentation/cart/01-architecture-overview.md)
+3. [Cart Validation Engine](../../documentation/cart/03-validation-engine.md)
+4. [Checkout Domain](../../documentation/10-checkout-domain.md)
+5. [Order Domain](../../documentation/11-order-domain.md)
+6. [Seller Store Domain](../../documentation/12-seller-store-domain.md)
+7. [Identity Domain](../../documentation/04-identity-domain.md)
+8. [Delivery Domain](../../documentation/09-delivery-domain.md)
+9. [Subscription Domain](../../documentation/07-subscription-domain.md)
+10. [Homepage Backend](../../documentation/13-homepage-backend.md)
 
----
+## What The Docs Cover
 
-## 🏗️ System Highlights
+- domain responsibilities and boundaries;
+- entities, value objects, DTOs, and service responsibilities;
+- REST API surfaces and ownership rules;
+- persistence notes and schema-level invariants;
+- cache strategy and event-driven invalidation;
+- security and identity flows;
+- known gaps, trade-offs, and recommended next steps.
 
-| Feature | Description |
-|----------|-------------|
-| **Multi-Company Architecture** | Each artisan or company has its own isolated dashboard, site, and cart. |
-| **Deposit (عربون) System** | Customers can pay a partial deposit for handmade products to protect both sides. |
-| **Wallet Escrow** | Secure smart wallet locks funds until successful delivery. |
-| **Arabic FTS Search** | Full-text search with Arabic language support and synonym dictionary. |
-| **Shipment & Refund Logic** | Advanced delivery workflow with fair refund policies. |
-| **Company Site Builder** | Each business can design its own branded micro-website. |
-| **Role-Based Auth** | Supports customers, companies, drivers, and admins. |
-| **Spring Boot + PostgreSQL 17** | Clean, modular backend with modern Java 25 support. |
-| **Docker Ready** | Fully containerized with Compose for production deployment. |
+## Public Repository Scope
 
----
+Included:
 
-## 🧩 Module Structure
+- architecture notes;
+- domain references;
+- UML-oriented Markdown diagrams;
+- portfolio README content.
 
-| Folder | Description |
-|---------|-------------|
-| `01-Architecture-Overview` | Global system overview and diagram |
-| `02-Media-Management` | Image/video handling, storage, validation |
-| `03-Company-Site-Management` | Custom storefront builder for artisans |
-| `04-Product-System` | Product logic for ready & handmade crafts |
-| `05-Cart-System` | Multi-company shopping cart with deposit logic |
-| `06-Order-Management` | Secure order lifecycle with refund protection |
-| `07-Shipment-System` | Delivery workflow & driver management |
-| `08-Wallet-Escrow` | Smart wallet and transaction engine |
-| `09-Security-Auth` | JWT authentication and role authorization |
-| `10-Data-Architecture` | PostgreSQL schema and FTS setup |
+Not included:
 
----
+- private application source code;
+- production data;
+- secrets or credentials;
+- runnable deployment artifacts;
+- real users, revenue, or production metrics.
 
-## ⚙️ Tech Stack
+## Ownership
 
-- **Backend:** Java 25 (Spring Boot 3.x)  
-- **Database:** PostgreSQL 17  
-- **Auth:** JWT + Role-based access  
-- **Containerization:** Docker + Compose  
-- **Search:** PostgreSQL Full Text Search (Arabic)  
-- **Frontend (planned):** React + Tailwind CSS  
-- **Deployment:** Nginx + Docker stack  
+Copyright (c) 2026 Mohammed Alhajeen.
 
----
-
-## 🧠 Why Suqnna is Not a Typical E-Commerce Platform
-
-Suqnna is built to **preserve heritage and build trust** in a complex ecosystem:
-- It combines **traditional Palestinian crafts** with modern financial protection (escrow).
-- It enables **artisans** to own their brand identity while using a **shared infrastructure**.
-- It allows **customers** to pre-order handmade products securely, with refundable deposits.
-- It uses **modular microservice-like architecture** ready for future scalability.
-
----
-
-## 📜 License
-
-Licensed under the **MIT License**.  
-© 2025 Mohammed Alhajeen — Suqnna Marketplace.
-
----
-
-## 🌍 Vision
-
-To create a trusted, ethical, and modern Palestinian e-commerce ecosystem  
-that celebrates **authentic craftsmanship**, **economic empowerment**,  
-and **digital independence**.
-
----
-
+This documentation is published for review and portfolio purposes. Bun Commerce itself is not open-source software.
