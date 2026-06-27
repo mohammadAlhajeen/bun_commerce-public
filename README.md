@@ -105,44 +105,8 @@ Private implementation stack:
 - Seller-store read model with slug-based public pages, product-card projection, filtering, pagination, and cache invalidation.
 - Identity model with JWT access, refresh-token rotation, public identity mapping, account state checks, and documented security risks.
 - Delivery model with driver/company workflows, shipment assignment, and delivery state transitions.
-- JMeter load testing of a realistic, weighted traffic mix (homepage, product detail, search, store pages, cart sessions) that found a cart-write index bottleneck and validated the migration that fixed it.
+- JMeter load testing of a realistic, weighted traffic mix (homepage, product detail, search, store pages, cart sessions) across 299,400 logged requests with zero errors, documented with full per-run results and an explicit accounting of which changes between runs can and cannot be attributed to the observed latency drop.
 - Written trade-off sections that identify what is implemented, what is intentionally deferred, and what should be improved before production use.
-
-## CV Bullets
-
-```text
-Built and documented a full-stack marketplace commerce platform with Java/Spring Boot, PostgreSQL/Flyway, Docker-oriented deployment, and a Next.js/React storefront.
-
-Designed modular backend domains for catalog, cart, checkout, orders, delivery, identity, subscriptions, media, addresses, and seller storefronts.
-
-Modeled real commerce workflows including product variants, tracked inventory, cart reconciliation, checkout snapshots, order lifecycle, seller store pages, delivery assignment, and public product/store search.
-
-Documented architecture, domain invariants, API contracts, persistence models, trade-offs, and improvement areas across the platform.
-```
-
-Short version:
-
-```text
-Bun Commerce - Full-stack marketplace platform documentation: Java/Spring backend architecture, PostgreSQL/Flyway persistence design, Next.js storefront workflows, catalog/cart/checkout/order/delivery/seller domains, and detailed domain trade-offs.
-```
-
-## Reviewer Notes
-
-Strongest signals:
-
-- broad product scope across customer, seller, delivery, and admin workflows;
-- strong domain modeling discipline;
-- realistic commerce rules around inventory, cart validation, checkout snapshots, and order lifecycle;
-- documented persistence and API boundaries;
-- explicit trade-offs and known improvement areas;
-- load-tested cart write path with before/after numbers tied to a real schema migration, not just claimed performance.
-
-Current public-repo limitations:
-
-- source code is private and not included here;
-- this repository is not runnable by itself;
-- screenshots and a short demo video should still be added;
-- some older detailed docs may contain implementation notes that should be reviewed before broad public sharing.
 
 ## Ownership
 
