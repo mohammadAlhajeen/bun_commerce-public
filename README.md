@@ -69,6 +69,7 @@ Start here:
 - [Subscription Domain](documentation/07-subscription-domain.md)
 - [Homepage Backend](documentation/13-homepage-backend.md)
 - [Standardized Product Card Refactor](documentation/standardized-product-card-refactor.md)
+- [JMeter Load Testing](documentation/jmeter-load-testing.md)
 
 UML-oriented notes are also available next to the domain documents, for example:
 
@@ -104,6 +105,7 @@ Private implementation stack:
 - Seller-store read model with slug-based public pages, product-card projection, filtering, pagination, and cache invalidation.
 - Identity model with JWT access, refresh-token rotation, public identity mapping, account state checks, and documented security risks.
 - Delivery model with driver/company workflows, shipment assignment, and delivery state transitions.
+- JMeter load testing of a realistic, weighted traffic mix (homepage, product detail, search, store pages, cart sessions) that found a cart-write index bottleneck and validated the migration that fixed it.
 - Written trade-off sections that identify what is implemented, what is intentionally deferred, and what should be improved before production use.
 
 ## CV Bullets
@@ -132,7 +134,8 @@ Strongest signals:
 - strong domain modeling discipline;
 - realistic commerce rules around inventory, cart validation, checkout snapshots, and order lifecycle;
 - documented persistence and API boundaries;
-- explicit trade-offs and known improvement areas.
+- explicit trade-offs and known improvement areas;
+- load-tested cart write path with before/after numbers tied to a real schema migration, not just claimed performance.
 
 Current public-repo limitations:
 
