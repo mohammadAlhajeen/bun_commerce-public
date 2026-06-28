@@ -39,6 +39,11 @@ This folder contains domain and architecture notes for Bun Commerce.
 - [Future Extensions](cart/07-future-extensions.md)
 - [Known Limitations](cart/08-known-limitations.md)
 
+## Performance and Load Testing
+
+- [JMeter Load Testing](jmeter-load-testing.md)
+- [Cart Index Before/After Benchmark](../load-testing/cart-index-benchmark/README.md)
+
 ## UML Notes
 
 - [App User UML](01-app-user-uml.md)

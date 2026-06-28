@@ -70,6 +70,7 @@ Start here:
 - [Homepage Backend](documentation/13-homepage-backend.md)
 - [Standardized Product Card Refactor](documentation/standardized-product-card-refactor.md)
 - [JMeter Load Testing](documentation/jmeter-load-testing.md)
+- [Cart Index Before/After Benchmark](load-testing/cart-index-benchmark/README.md)
 
 UML-oriented notes are also available next to the domain documents, for example:
 
@@ -100,6 +101,7 @@ Private implementation stack:
 - Modular domain documentation across catalog, cart, checkout, order, delivery, identity, seller-store, subscription, address, and homepage modules.
 - Current-branch read-model documentation for standardized `ProductCard`, store pages, FTS-backed product/store search, and global search.
 - Cart validation model with deterministic validators, reconciliation modes, item repair, item removal, stock checks, and price-change acknowledgement.
+- Load-testing artifacts include a cart index benchmark across 10k, 50k, and 100k cart rows showing V15 kept read paths covered while reducing redundant index write cost and cart-domain index size by roughly 26-32%.
 - Checkout design that separates mutable cart state from immutable commercial confirmation snapshots.
 - Product model with variants, tracked inventory, default variant rules, active/inactive lifecycle, collection membership, and cache-aware reads.
 - Seller-store read model with slug-based public pages, product-card projection, filtering, pagination, and cache invalidation.
